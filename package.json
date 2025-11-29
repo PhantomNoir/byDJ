@@ -1,0 +1,34 @@
+{
+  "name": "bydj",
+  "version": "1.0.0",
+  "description": "A Twitch chatbot designed to add song request via channel point redemption to streamer's Spotify queue.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhantomNoir/byDJ.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/PhantomNoir/byDJ/issues"
+  },
+  "homepage": "https://github.com/PhantomNoir/byDJ#readme",
+  "dependencies": {
+    "@twurple/api": "^8.0.2",
+    "@twurple/auth": "^8.0.2",
+    "@twurple/chat": "^8.0.2",
+    "@twurple/eventsub-ws": "^8.0.2",
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "node-cache": "^5.1.2",
+    "spotify-web-api-node": "^5.0.2",
+    "tmi.js": "^1.8.5"
+  }
+}
