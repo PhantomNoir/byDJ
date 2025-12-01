@@ -17,7 +17,15 @@ async function searchSong(query) {
 }
 
 async function queueSong(uri) {
-    await spotifyApi.addToQueue(uri);
+    try {
+        await spotifyApi.addToQueue(uri);
+    } catch (err) {
+        if (err.statusCode === 404) {
+            console.log('No active Spotify device! Open Spotify and try again.');
+        } else {
+            console.error('Queue error:', err);
+        }
+    }
 }
 
 module.exports = { spotifyApi, setAccessToken, searchSong, queueSong };
