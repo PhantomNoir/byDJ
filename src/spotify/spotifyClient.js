@@ -1,4 +1,8 @@
 const SpotifyWebApi = require('spotify-web-api-node');
+const fs = require('fs');
+const path = require('path');
+
+const tokenPath = path.join(__dirname, '../../tokens.json');
 
 const spotifyApi = new SpotifyWebApi({
     clientId:process.env.SPOTIFY_CLIENT_ID,
@@ -6,9 +10,18 @@ const spotifyApi = new SpotifyWebApi({
     redirectUri: process.env.SPOTIFY_REDIRECT_URI
 });
 
-async function setAccessToken(tokenData) {
-    spotifyApi.setAccessToken(tokenData.access_token);
-    spotifyApi.setRefreshToken(tokenData.refresh_token);
+function readTokensFile() {
+    if (!fs.existsSync(tokenPath)) return null;
+
+    try {
+        return JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+    } catch {
+        return null;
+    }
+}
+
+async function ensureAccessToken() {
+    
 }
 
 async function searchSong(query) {
@@ -28,4 +41,4 @@ async function queueSong(uri) {
     }
 }
 
-module.exports = { spotifyApi, setAccessToken, searchSong, queueSong };
+module.exports = { spotifyApi, ensureAccessToken, searchSong, queueSong };
