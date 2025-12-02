@@ -60,14 +60,19 @@ async function searchSong(query) {
 }
 
 async function queueSong(uri) {
+    await ensureAccessToken();
     try {
         await spotifyApi.addToQueue(uri);
+        return true;
     } catch (err) {
-        if (err.statusCode === 404) {
-            console.log('No active Spotify device! Open Spotify and try again.');
-        } else {
-            console.error('Queue error:', err);
+        // handle no active device
+        const status = err.statusCode || (err.status && err.status);
+        if (status === 404) {
+            const e = new Error('No active Spotify device found. Start Spotify on a device and try again.');
+            e.code = 'NO_DEVICE';
+            throw e;
         }
+        throw err;
     }
 }
 
