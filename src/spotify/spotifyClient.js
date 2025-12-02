@@ -53,8 +53,10 @@ async function ensureAccessToken() {
 }
 
 async function searchSong(query) {
-    const res = await spotifyApi.searchTracks(query);
-    return res.body.tracks.items[0];
+    await ensureAccessToken();
+    const res = await spotifyApi.searchTracks(query, { limit: 5 });
+    const { items } = res.body.tracks.items;
+    return items && items.length ? items[0] : null;
 }
 
 async function queueSong(uri) {
