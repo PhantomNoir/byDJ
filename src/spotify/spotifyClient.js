@@ -21,7 +21,35 @@ function readTokensFile() {
 }
 
 async function ensureAccessToken() {
-    
+    const tokenData = readTokensFile();
+    if (!tokenData || !tokenData.refresh_token) {
+        throw new Error('No Spotify refresh token found. Visit /auth/spotify/login to authorize.');
+    }
+
+    spotifyApi.setRefreshToken(tokenData.refresh_token);
+    // if token not expired, set access token
+    if (tokenData.access_token && tokenData.expires_at && Date.now() < tokenData.expires_at - 10000) {
+        spotifyApi.setAccessToken(tokenData.access_token);
+        return spotifyApi.getAccessToken();
+    }
+
+    // refresh
+    try {
+        const data = await spotifyApi.refreshAccessToken();
+        const access_token = data.body['access_token'];
+        const expires_in = data.body['expires_in'];
+
+        // update tokens file (keep refresh token if present)
+        const newTokenObj = {
+            ...tokenData,
+            access_token,
+            expires_at: Date.now() + (expires_in * 1000)
+        };
+        fs.writeFileSync(tokenPath, JSON.stringify(newTokenObj, null, 2));
+        return access_token;
+    } catch (err) {
+        throw new Error('Failed to refresh Spotify access token: ' + (err.message || err));
+    }
 }
 
 async function searchSong(query) {
