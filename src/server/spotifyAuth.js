@@ -25,7 +25,7 @@ router.get('/auth/spotify/login', (req, res) => {
 });
 
 router.get('/auth/spotify/callback', async (req, res) => {
-    const code = req.query.code;
+    const { code } = req.query.code;
     if (!code) return res.status(400).send('No code returned by Spotify.');
 
     try {
