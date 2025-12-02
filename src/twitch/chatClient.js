@@ -1,43 +1,47 @@
-const { ChatClient } = require('@twurple/chat');
-const { RefreshingAuthProvider } = require('@twurple/auth');
-const fs = require('fs');
-const { handleSongRequest } = require('../handlers/songRequestHandler');
-const { channel } = require('diagnostics_channel');
-
-const path = require('path');
-const tokenPath = path.join(__dirname, '../../tokens.json');
+const tmi = require('tmi.js');
 
 let chatClient;
 
 async function startChatClient() {
-    const clientId = process.env.TWITCH_CLIENT_ID;
-    const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+    const botName = process.env.TWITCH_BOT_USERNAME;
+    const botOauth = process.env.TWITCH_BOT_OATH;
+    const channel = process.env.TWITCH_CHANNEL;
 
-    const tokenData = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+    if (!botName || !botOauth || !channel) {
+        console.warn('Twitch chat not started: missing TWITCH_BOT_USERNAME, TWITCH_BOT_OATH or TWITCH_CHANNEL.');
+        return;
+    }
 
-    const authProvider = new RefreshingAuthProvider(
-        {
-            clientId,
-            clientSecret,
-            onRefresh: newTokenData => 
-                fs.writeFileSync(tokenPath, JSON.stringify(newTokenData, null, 4))
+    chatClient = new tmi.Client({
+        identity: {
+            username: botName,
+            password: botOauth
         },
-        tokenData
-    );
-
-    chatClient = new ChatClient({
-        authProvider,
-        channels: [process.env.TWITCH_CHANNEL]
+        channels: [channel]
     });
 
-    chatClient.onMessage(async (channel, user, message) => {
-        if (message.startsWith('!song')) {
-            await handleSongRequest(user, message);
+    chatClient.on('message', async (channel, tags, message, self) => {
+        if (self) return;
+        // simple fallback: !song <name>
+        if (message.toLocaleLowerCase().startsWith('!song ')) {
+            const { handleSongRequestFromChat } = require('../handlers/songRequestHandler');
+            const user = tags['display-name'] || tags.username;
+            const query = message.substring(6).trim();
+            await handleSongRequestFromChat(user, query, channel);
         }
     });
 
     await chatClient.connect();
-    console.log('Chat client connected.');
+    console.log('TMI chat connected.');
 }
 
-module.exports = { startChatClient };
+async function sendChatMessage(channel, message) {
+    if (!chatClient) return;
+    try {
+        await chatClient.say(channel, message);
+    } catch (err) {
+        console.warn('Failed to send chat message: ', err.message || err);
+    }
+}
+
+module.exports = { startChatClient, sendChatMessage };
