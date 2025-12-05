@@ -1,40 +1,45 @@
-const { EventSubWSListener } = require('@twurple/eventsub-ws');
+const { EventSubWsListener } = require('@twurple/eventsub-ws');
 const { ApiClient } = require('@twurple/api');
-const { RefreshingAuthProvider } = require('@twurple/auth');
-const fs = require('fs');
-const { handleSongRequest } = require('../handlers/songRequestHandler');
-
+const { ClientCredentialsAuthProvider } = require('@twurple/auth');
 const path = require('path');
-const tokenPath = path.join(__dirname, '../../tokens.json');
+const { handleSongRequestFromRedemption } = require('../handlers/songRequestHandler');
+const sendChat = require('./chatWrapper');
 
 async function initEventSub() {
     const clientId = process.env.TWITCH_CLIENT_ID;
     const clientSecret = process.env.TWITCH_CLIENT_SECRET;
-    const channelId = process.env.TWITCH_CHANNEL_ID;
+    const broadcasterId = process.env.TWITCH_BROADCASTER_ID; 
+    const rewardId = process.env.SONG_REWARD_ID; 
 
-    const tokenData = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+    if (!clientId || !clientSecret || !broadcasterId) {
+        console.warn('Skipping EventSub: missing TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET or TWITCH_BROADCASTER_ID.');
+        return;
+    }
 
-    const authProvider = new RefreshingAuthProvider(
-        {
-            clientId,
-            clientSecret,
-            onRefresh: newTokenData => 
-                fs.writeFileSync(tokenPath, JSON.stringify(newTokenData, null, 4))
-        },
-        tokenData
-    );
+    const authProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
+    const apiClient = new ApiClient({ authProvider });
 
-    const api = new ApiClient({ authProvider });
-    const listener = new EventSubWSListener({ apiClient: api });
+    const listener = new EventSubWsListener({ apiClient });
 
-    listener.onChannelRedemptionAdd(channelId, async event => {
-        if (event.rewardTitle.toLowercase().includes('song')) {
-            await handleSongRequest(event.userName, event.input);
+    // channel points redemption event subscription
+    listener.onChannelPointsRewardRedeemed(async (event) => {
+        try {
+            if (rewardId && event.reward.id !== rewardId) { return; }
+
+            const username = event.userDisplayName || event.userName;
+            const input = event.userInput || '';
+            console.log('Received redemption from', username, 'input:', input);
+
+            // hand off to handler
+            await handleSongRequestFromRedemption(username, input, event);
+
+        } catch (err) {
+            console.error('Error handling redemption:', err);
         }
     });
 
-    listener.start();
-    console.log('Event WebSocket listener started.');
+    await listener.listen();
+    console.log('EventSub WebSocket listener started.');
 }
 
 module.exports = { initEventSub };
